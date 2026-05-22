@@ -1,6 +1,6 @@
 # DSA-C Projects — Week 3 Formative Assignment
 
-> **Language:** C &nbsp;|&nbsp; **Topic:** Data Structures & Algorithm Analysis &nbsp;|&nbsp; **Total Marks:** 17
+> **Language:** C &nbsp;|&nbsp; **Topic:** Data Structures & Algorithm Analysis &nbsp;|&nbsp; 
 
 ---
 
