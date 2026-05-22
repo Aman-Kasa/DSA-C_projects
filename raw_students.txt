@@ -1,0 +1,3 @@
+John|Doe|88.5
+Jane|Doe|92.0
+Mark|Zuckerberg|75.0
