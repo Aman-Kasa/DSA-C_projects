@@ -96,7 +96,7 @@ int main() {
     char fName[STR_LEN], lName[STR_LEN];
     double gradeVal;
 
-    while (fscanf(file, " %99[^|]| %99[^|]| %lf", fName, lName, &gradeVal) == 3) {
+    while (fscanf(file, " %99[^|]|%99[^|]|%lf", fName, lName, &gradeVal) == 3) {
         insertBST(&root, lName, fName, gradeVal);
     }
     fclose(file);
