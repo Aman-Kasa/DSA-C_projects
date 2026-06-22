@@ -41,15 +41,20 @@ void init_tracker() {
 
 void add_incident(const char* desc) {
     pthread_mutex_lock(&tracker.lock);
-    
+
     Incident *new_inc = (Incident*)malloc(sizeof(Incident));
+    if (!new_inc) {
+        perror("[Error] Memory allocation failed for new incident");
+        pthread_mutex_unlock(&tracker.lock);
+        return;
+    }
     new_inc->id = tracker.next_id++;
     strncpy(new_inc->description, desc, 255);
     new_inc->description[255] = '\0';
     new_inc->timestamp = time(NULL);
     new_inc->next = NULL;
     new_inc->prev = tracker.tail;
-    
+
     if (tracker.tail == NULL) {
         tracker.head = new_inc;
         tracker.tail = new_inc;
@@ -58,15 +63,15 @@ void add_incident(const char* desc) {
         tracker.tail->next = new_inc;
         tracker.tail = new_inc;
     }
-    
+
     tracker.count++;
-    
+
     // Enforce 25 incident capacity
     if (tracker.count > MAX_INCIDENTS) {
         Incident *temp = tracker.head;
         tracker.head = tracker.head->next;
         if (tracker.head) tracker.head->prev = NULL;
-        
+
         // If active pointer was on the deleted head, shift it forward
         if (tracker.active == temp) {
             tracker.active = tracker.head;
@@ -74,7 +79,7 @@ void add_incident(const char* desc) {
         free(temp);
         tracker.count--;
     }
-    
+
     pthread_mutex_unlock(&tracker.lock);
 }
 
@@ -100,8 +105,8 @@ void print_active() {
         struct tm *tm_info = localtime(&tracker.active->timestamp);
         char time_buf[26];
         strftime(time_buf, 26, "%H:%M:%S", tm_info);
-        printf("\r>> Incident #%d [%s]: %s (Showing %d of %d)       \n", 
-               tracker.active->id, time_buf, tracker.active->description, 
+        printf("\r>> Incident #%d [%s]: %s (Showing %d of %d)       \n",
+               tracker.active->id, time_buf, tracker.active->description,
                tracker.active->id - (tracker.head->id) + 1, tracker.count);
     }
     pthread_mutex_unlock(&tracker.lock);
@@ -112,9 +117,15 @@ void* live_feed(void* arg) {
     char buffer[256];
     int sim_count = 1;
     while (tracker.is_live) {
-        sleep(5); // Simulate a new incident every 5 seconds
+        // Responsive sleep loop: checks flag every 100ms for up to 5 seconds
+        for (int i = 0; i < 50; i++) {
+            if (!tracker.is_live) break;
+            usleep(100000); // 100ms
+        }
+        
         if (!tracker.is_live) break;
-        sprintf(buffer, "Simulated Emergency Report Alpha-%d", sim_count++);
+
+        snprintf(buffer, sizeof(buffer), "Simulated Emergency Report Alpha-%d", sim_count++);
         add_incident(buffer);
         printf("\n[ALERT] New incident arrived! Press 'f' to view.\n");
         print_active();
@@ -127,10 +138,10 @@ int main() {
     init_tracker();
     char command;
     pthread_t live_thread;
-    
+
     printf("Emergency Dispatch Incident Tracker Initialized.\n");
     printf("Commands: [f] newer, [b] older, [l] live on, [s] live off, [d] delete all, [q] quit\n");
-    
+
     // Seed some initial data
     add_incident("Vehicle collision on Main St");
     add_incident("Fire alarm triggered at City Hall");
@@ -161,7 +172,10 @@ int main() {
                 if (!tracker.is_live) {
                     tracker.is_live = 1;
                     printf("\n[System] Live monitoring ENABLED.\n");
-                    pthread_create(&live_thread, NULL, live_feed, NULL);
+                    if (pthread_create(&live_thread, NULL, live_feed, NULL) != 0) {
+                        perror("[Error] Failed to create live monitoring thread");
+                        tracker.is_live = 0;
+                    }
                 }
                 break;
             case 's':
